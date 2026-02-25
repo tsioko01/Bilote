@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Belote Counter - Full Rules Version</title>
+<style>
+body { font-family: Arial; background: #0f2f26; color: white; text-align: center; margin: 0; }
+h1 { margin: 15px 0; }
+.container { max-width: 500px; margin: auto; padding: 15px; }
+.card { background: #174a3a; padding: 15px; border-radius: 12px; margin-bottom: 15px; }
+input, select { padding: 8px; margin: 5px; width: 90px; text-align: center; border-radius: 6px; border: none; }
+button { padding: 8px 14px; margin: 6px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+.primary{background:#2ecc71;color:black;}
+.secondary{background:#3498db;color:white;}
+.danger{background:#e74c3c;color:white;}
+table{width:100%;border-collapse:collapse;margin-top:10px;}
+th, td{border:1px solid #ffffff33;padding:6px;}
+.winner{font-size:22px;color:#f1c40f;margin-top:10px;}
+.break-line { display: block; margin-top: 10px; }
+</style>
+</head>
+<body>
+
+<h1>🎴 Belote Counter</h1>
+<div class="container">
+
+<div class="card">
+<h3>Round Setup</h3>
+
+<p>Contract Team & Points</p>
+<select id="contract">
+  <option value="A">Team A</option>
+  <option value="B">Team B</option>
+</select>
+<input type="number" id="contractPoints" placeholder="Contract ≥82" min="82" max="162">
+
+<p>Trick Points</p>
+<input type="number" id="scoreA" placeholder="Team A" min="0" max="162">
+<input type="number" id="scoreB" placeholder="Team B" min="0" max="162" readonly>
+
+<p>Declarations Points</p>
+<input type="number" id="declA" placeholder="Team A" min="0">
+<input type="number" id="declB" placeholder="Team B" min="0">
+
+<p class="break-line">Special</p>
+<button class="primary" id="capotBtn" onclick="capotRound()">Capot</button>
+<br>
+<label><input type="checkbox" id="klisto"> Κλειστό (×2)</label>
+<label><input type="checkbox" id="anoichto"> Ανοιχτό (×4)</label>
+
+<br>
+<button class="primary" onclick="addRound()">Add Round</button>
+<button class="secondary" onclick="undoRound()">Undo</button>
+<button class="danger" onclick="resetGame()">Reset</button>
+
+</div>
+
+<div class="card">
+<h3>Total</h3>
+<p>Team A: <span id="totalA">0</span></p>
+<p>Team B: <span id="totalB">0</span></p>
+<div class="winner" id="winner"></div>
+</div>
+
+<div class="card">
+<h3>History</h3>
+<table>
+<thead>
+<tr><th>R</th><th>A</th><th>B</th></tr>
+</thead>
+<tbody id="history"></tbody>
+</table>
+</div>
+
+</div>
+
+<script>
+let totalA=0, totalB=0, round=1, history=[];
+
+// Auto-fill Team B trick points
+document.getElementById("scoreA").addEventListener("input", () => {
+  let val = parseInt(document.getElementById("scoreA").value) || 0;
+  if(val>162) val=162;
+  document.getElementById("scoreB").value = 162 - val;
+});
+
+function addRound() {
+  let contractTeam = document.getElementById("contract").value;
+  let bet = parseInt(document.getElementById("contractPoints").value) || 82;
+  let declA = parseInt(document.getElementById("declA").value) || 0;
+  let declB = parseInt(document.getElementById("declB").value) || 0;
+
+  let klisto = document.getElementById("klisto").checked;
+  let anoichto = document.getElementById("anoichto").checked;
+
+  let scoreA = parseInt(document.getElementById("scoreA").value) || 0;
+  let scoreB = parseInt(document.getElementById("scoreB").value) || 0;
+
+  let roundA=0, roundB=0;
+
+  let totalContract = (contractTeam==='A'? scoreA : scoreB) + (contractTeam==='A'? declA : declB);
+  let totalOpponent = (contractTeam==='A'? scoreB : scoreA) + (contractTeam==='A'? declB : declA);
+
+  // Handle Klisto or Anoichto
+  if(klisto || anoichto){
+    let multiplier = klisto ? 2 : 4;
+    let totalPoints = bet * multiplier + 162 + declA + declB;
+    if(totalContract >= bet){
+      if(contractTeam==='A') { roundA=totalPoints; roundB=0; }
+      else { roundB=totalPoints; roundA=0; }
+    } else {
+      if(contractTeam==='A') { roundB=totalPoints; roundA=0; }
+      else { roundA=totalPoints; roundB=0; }
+    }
+  } else { // Normal round
+    if(totalContract >= bet){ // Contract team succeeds
+      if(contractTeam==='A') { roundA = scoreA + declA + bet; roundB = scoreB + declB; }
+      else { roundB = scoreB + declB + bet; roundA = scoreA + declA; }
+    } else { // Contract team fails
+      let totalPoints = scoreA + scoreB + declA + declB + bet;
+      if(contractTeam==='A') { roundB = totalPoints; roundA =0; }
+      else { roundA = totalPoints; roundB =0; }
+    }
+  }
+
+  totalA += roundA;
+  totalB += roundB;
+  history.push({round, roundA, roundB});
+  updateUI();
+  clearInputs();
+  round++;
+}
+
+function capotRound() {
+  let contractTeam = document.getElementById("contract").value;
+  let bet = parseInt(document.getElementById("contractPoints").value) || 162;
+  let declA = parseInt(document.getElementById("declA").value) || 0;
+  let declB = parseInt(document.getElementById("declB").value) || 0;
+
+  let roundA=0, roundB=0;
+  let totalPoints = bet + 250 + declA + declB;
+
+  if(contractTeam==='A'){ roundA=totalPoints; roundB=0; }
+  else { roundB=totalPoints; roundA=0; }
+
+  totalA += roundA;
+  totalB += roundB;
+  history.push({round, roundA, roundB});
+  updateUI();
+  clearInputs();
+  round++;
+}
+
+function updateUI(){
+  document.getElementById("totalA").textContent = (totalA/10).toFixed(1);
+  document.getElementById("totalB").textContent = (totalB/10).toFixed(1);
+
+  let html = "";
+  for(let r of history){
+    html += `<tr><td>${r.round}</td><td>${(r.roundA/10).toFixed(1)}</td><td>${(r.roundB/10).toFixed(1)}</td></tr>`;
+  }
+  document.getElementById("history").innerHTML = html;
+
+  if(totalA>=1001 || totalB>=1001){
+    document.getElementById("winner").textContent =
+      totalA>totalB?"🏆 Team A Wins!":"🏆 Team B Wins!";
+  } else document.getElementById("winner").textContent = "";
+}
+
+function undoRound(){
+  if(history.length===0) return;
+  let last = history.pop();
+  totalA -= last.roundA; totalB -= last.roundB; round--;
+  updateUI();
+}
+
+function resetGame(){
+  if(!confirm("Reset game?")) return;
+  totalA=0; totalB=0; round=1; history=[];
+  updateUI();
+  clearInputs();
+}
+
+function clearInputs(){
+  document.getElementById("scoreA").value="";
+  document.getElementById("scoreB").value="";
+  document.getElementById("contractPoints").value="";
+  document.getElementById("declA").value="";
+  document.getElementById("declB").value="";
+  document.getElementById("capotBtn").blur();
+  document.getElementById("klisto").checked=false;
+  document.getElementById("anoichto").checked=false;
+}
+</script>
+
+</body>
+</html>
