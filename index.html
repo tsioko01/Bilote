@@ -2,7 +2,8 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Belote Counter - Full Rules Version</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Belote Counter - Mobile Friendly</title>
 <style>
 body { font-family: Arial; background: #0f2f26; color: white; text-align: center; margin: 0; }
 h1 { margin: 15px 0; }
@@ -14,9 +15,22 @@ button { padding: 8px 14px; margin: 6px; border: none; border-radius: 8px; curso
 .secondary{background:#3498db;color:white;}
 .danger{background:#e74c3c;color:white;}
 table{width:100%;border-collapse:collapse;margin-top:10px;}
-th, td{border:1px solid #ffffff33;padding:6px;}
+th, td{border:1px solid #ffffff33;padding:6px; text-align:center;}
 .winner{font-size:22px;color:#f1c40f;margin-top:10px;}
 .break-line { display: block; margin-top: 10px; }
+.button-group { display:flex; flex-wrap:wrap; justify-content:center; }
+
+/* Mobile responsiveness */
+@media screen and (max-width: 500px) {
+  .container { padding: 10px; }
+  input, select { width: 100%; box-sizing: border-box; margin: 5px 0; }
+  button { width: 48%; margin: 4px 1%; font-size: 16px; }
+  .card { padding: 10px; }
+  table { display: block; overflow-x: auto; white-space: nowrap; }
+  th, td { min-width: 50px; text-align: center; }
+  h1 { font-size: 22px; }
+  .winner { font-size: 18px; }
+}
 </style>
 </head>
 <body>
@@ -49,9 +63,11 @@ th, td{border:1px solid #ffffff33;padding:6px;}
 <label><input type="checkbox" id="anoichto"> Ανοιχτό (×4)</label>
 
 <br>
-<button class="primary" onclick="addRound()">Add Round</button>
-<button class="secondary" onclick="undoRound()">Undo</button>
-<button class="danger" onclick="resetGame()">Reset</button>
+<div class="button-group">
+  <button class="primary" onclick="addRound()">Add Round</button>
+  <button class="secondary" onclick="undoRound()">Undo</button>
+  <button class="danger" onclick="resetGame()">Reset</button>
+</div>
 
 </div>
 
@@ -83,6 +99,14 @@ document.getElementById("scoreA").addEventListener("input", () => {
   if(val>162) val=162;
   document.getElementById("scoreB").value = 162 - val;
 });
+
+// Round display function based on last digit
+function displayScore(score){
+  let lastDigit = score % 10;
+  let hundreds = Math.floor(score / 10);
+  if(lastDigit >= 7) hundreds += 1;
+  return hundreds;
+}
 
 function addRound() {
   let contractTeam = document.getElementById("contract").value;
@@ -152,15 +176,18 @@ function capotRound() {
 }
 
 function updateUI(){
-  document.getElementById("totalA").textContent = (totalA/10).toFixed(1);
-  document.getElementById("totalB").textContent = (totalB/10).toFixed(1);
+  // Display total score as integer with rounding rule
+  document.getElementById("totalA").textContent = displayScore(totalA);
+  document.getElementById("totalB").textContent = displayScore(totalB);
 
+  // Update history
   let html = "";
   for(let r of history){
-    html += `<tr><td>${r.round}</td><td>${(r.roundA/10).toFixed(1)}</td><td>${(r.roundB/10).toFixed(1)}</td></tr>`;
+    html += `<tr><td>${r.round}</td><td>${displayScore(r.roundA)}</td><td>${displayScore(r.roundB)}</td></tr>`;
   }
   document.getElementById("history").innerHTML = html;
 
+  // Display winner
   if(totalA>=1001 || totalB>=1001){
     document.getElementById("winner").textContent =
       totalA>totalB?"🏆 Team A Wins!":"🏆 Team B Wins!";
